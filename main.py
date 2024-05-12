@@ -325,7 +325,7 @@ with cols[1]:
     fig = px.scatter(df_full[df_full.control=="Finish"], y="placement", x="duration_h", color="year",
                      title="Placement vs Finish Time per Year",
                      labels={'duration_h': 'Duration Hours', 'placement': 'Placement'},
-                     color_discrete_sequence=px.colors.qualitative.Set3)
+                     color_continuous_scale=px.colors.sequential.YlGnBu)
 
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
 
