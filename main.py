@@ -8,23 +8,29 @@ import plotly.express as px
 from PIL import Image
 from utils import custom_widgets as cw
 
+@st.cache_data
+def read_data(available_years):
+    tmp = pd.DataFrame(columns=['placement', 'startnr', 'name', 'class', 'club', 'time', 'gender',
+       'control', 'year', 'country', 'duration_s', 'duration_h', 'startgroup',
+       'd_duration_s', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
+       'd_descent', 'avg_speed_kmh', 'avg_speed_minkm'])
+    for year in available_years:
+        tmp = pd.concat([tmp, pd.read_parquet("data/" + str(year) + "_full.parquet")], ignore_index=True)
+    return tmp
+
 # Page setting
 st.set_page_config(layout="wide", page_title="Vasaloppet Results Explorer (BETA)")
+
+plotly_config = {'displayModeBar': False, 'scrollZoom':False }
 
 with open('style.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 
 # Data load & data management
-df_full = pd.DataFrame(columns=['placement', 'startnr', 'name', 'class', 'club', 'time', 'gender',
-       'control', 'year', 'country', 'duration_s', 'duration_h', 'startgroup',
-       'd_duration_s', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
-       'd_descent', 'avg_speed_kmh', 'avg_speed_minkm'])
-
 available_years = [2018, 2019, 2020, 2022, 2023, 2024]
 
-for year in available_years:
-    df_full = pd.concat([df_full, pd.read_parquet("data/"+ str(year) + "_full.parquet")], ignore_index=True)
+df_full = read_data(available_years=available_years)
 
 for col in ["placement", "year", "duration_s", "duration_m", "duration_h", "d_duration_s", "height_m",
             "distance_km", "d_distance_km", "d_ascent", "d_descent", "avg_speed_kmh", "avg_speed_minkm"]:
@@ -97,15 +103,17 @@ with cols[0]:
 
     fig.update_traces(xbins=dict(start=3.5, end=13.5, size=0.5))
 
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True, config = plotly_config)
 
     st.write("""Histogram showing the distibution of finish times of all participants in blocks of 30mins.
               I.e. the bar at 6-6.5h shows the amount of participants finishing the race in 6-6.5 hours """)
 with cols[1]:
-    st.plotly_chart(px.scatter(df_finish, y="placement", x="duration_h", color="gender",
+    fig = px.scatter(df_finish, y="placement", x="duration_h", color="gender",
                                title="Placement vs Finish Time",
                                labels={'duration_h': 'Duration Hours', 'placement': 'Placement'},
-                    color_discrete_sequence=px.colors.qualitative.Set3))
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
 
     st.write("""Plot showing the relationship between finish time and position in the race for men and women.
                   Hover over the plots x-axis to see what a certain time would have given you as a placement (y-axis) """)
@@ -113,11 +121,11 @@ with cols[1]:
 cols = st.columns(2)
 with cols[0]:
     fig = px.bar(grp_row, x=grp_row.index, y="startnr",
-                           title="Participants per Start Group",
-                           labels={'startnr': '# Participants', 'startgroup': 'Row'},
-                    color_discrete_sequence=px.colors.qualitative.Set3)
+                title="Participants per Start Group",
+                labels={'startnr': '# Participants', 'startgroup': 'Row'},
+                color_discrete_sequence=px.colors.qualitative.Set3)
     fig.update_layout(xaxis_type='category')
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Plot showing number of starting participants at each start-group of vasaloppet.""")
 with cols[1]:
     fig = px.violin(df_finish.sort_values(by="startgroup"), x="startgroup", y="duration_h",
@@ -125,7 +133,7 @@ with cols[1]:
                               labels={'duration_h': 'Duration Hours', 'startgroup': 'Row'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
     fig.update_layout(xaxis_type='category')
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Violin-plot showing the finish time distributions per starting group. Where the "violin" is as thickest means that most participants from that start-group finished in that time. 
                 Hover over the graph to see more metrics such as the mean time for the start group or the outer quantiles. """)
 
@@ -183,17 +191,19 @@ with cols[2]:
                           "Male Break-Offs")
 cols = st.columns(2)
 with cols[0]:
-    st.plotly_chart(px.bar(df_breaks, x="control", y="value",
+    fig = px.bar(df_breaks, x="control", y="value",
                            labels={'value': '# Break-Offs', 'control': 'Controlpoint'},
                            title="# Break-Offs before Controlpoint",
-                    color_discrete_sequence=px.colors.qualitative.Set3))
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Showing the amount of participants breaking before a certain control-point. 
     I.e. the value at Mångsbodarna shows how many participants that reached Smågan, but did not reach  (could have gotten stuck in the rope in Smågan, as the rope gets pulled after the timing-station)""")
 with cols[1]:
-    st.plotly_chart(px.bar(df_breaks_share, x="control", y="value", barmode="group", color="variable",
+    fig = px.bar(df_breaks_share, x="control", y="value", barmode="group", color="variable",
                            labels={'value': '% of Break-Offs', 'control': 'Controlpoint'},
                            title="Break Off Distribution per Gender",
-                    color_discrete_sequence=px.colors.qualitative.Set3))
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Showing the distribution between the control points of the breaking participants and per gender. 
     I.e. you can see if a certain gender is more or less likely to break early vs late in the race for example.""")
 
@@ -206,7 +216,7 @@ with cols[0]:
                  labels={'Break-Offs': '# of Break-Offs', 'startgroup': 'Row'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
     fig.update_layout(xaxis_type='category')
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Showing the total number of break-offs per start-row""")
 with cols[1]:
     fig = px.bar(df_breaks_row,
@@ -216,7 +226,7 @@ with cols[1]:
                  labels={"Break-Offs %": "% Share of Startgroup Participants", 'startgroup': 'Row'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
     fig.update_layout(xaxis_type='category')
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Showing the break-offs as a share of number of participants in that start-row.
      I.e. if you start in row 10, how likely is it that you will break-off during the race.""")
 
@@ -235,7 +245,7 @@ with cols[0]:
                   color="startgroup", title='Average Speed per Section and Startgroup',
                   labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Showing the average speed per section and start group. Note that it is the average speed on the section
     up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
 
@@ -245,7 +255,7 @@ with cols[1]:
                                   labels={'duration_m': 'Duration Minutes', 'startgroup': 'Row'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
     fig.update_layout(xaxis_type='category')
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write(f'Violin-plot showing the time distribution to reach {first_controlpoint}, from different start-groups.')
 
 cols = st.columns(2)
@@ -269,7 +279,7 @@ with cols[0]:
                   color="gender", title='Average Speed per Section and Gender',
                   labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Showing the average speed per section and start group. Note that it is the average speed on the section
     up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
 
