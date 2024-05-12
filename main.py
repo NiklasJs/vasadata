@@ -10,9 +10,9 @@ from utils import custom_widgets as cw
 
 @st.cache_data
 def read_data(available_years):
-    tmp = pd.DataFrame(columns=['placement', 'startnr', 'name', 'class', 'club', 'time', 'gender',
-       'control', 'year', 'country', 'duration_s', 'duration_h', 'startgroup',
-       'd_duration_s', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
+    tmp = pd.DataFrame(columns=['placement', 'placement_gender', 'startnr', 'name', 'class', 'club', 'time', 'gender',
+       'control', 'year', 'country', 'duration_s', 'duration_h', 'duration_m', 'startgroup',
+       'd_duration_s', 'd_duration_m', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
        'd_descent', 'avg_speed_kmh', 'avg_speed_minkm'])
     for year in available_years:
         tmp = pd.concat([tmp, pd.read_parquet("data/" + str(year) + "_full.parquet")], ignore_index=True)
@@ -32,7 +32,7 @@ available_years = [2018, 2019, 2020, 2022, 2023, 2024]
 
 df_full = read_data(available_years=available_years)
 
-for col in ["placement", "year", "duration_s", "duration_m", "duration_h", "d_duration_s", "height_m",
+for col in ["placement", "placement_gender", "year", "duration_s", "duration_m", "duration_h", "d_duration_s", "height_m",
             "distance_km", "d_distance_km", "d_ascent", "d_descent", "avg_speed_kmh", "avg_speed_minkm"]:
     df_full[col] = pd.to_numeric(df_full[col])
 
@@ -108,9 +108,9 @@ with cols[0]:
     st.write("""Histogram showing the distibution of finish times of all participants in blocks of 30mins.
               I.e. the bar at 6-6.5h shows the amount of participants finishing the race in 6-6.5 hours """)
 with cols[1]:
-    fig = px.scatter(df_finish, y="placement", x="duration_h", color="gender",
+    fig = px.scatter(df_finish, y="placement_gender", x="duration_h", color="gender",
                                title="Placement vs Finish Time",
-                               labels={'duration_h': 'Duration Hours', 'placement': 'Placement'},
+                               labels={'duration_h': 'Duration Hours', 'placement_gender': 'Placement'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
 
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
@@ -265,7 +265,7 @@ with cols[1]:
     st.markdown("#")
     st.markdown("#")
     st.markdown("#")
-    selstartgrp = st.selectbox("Select Startgroup to filter the graph to the left", ["All"] + startgroups)
+    selstartgrp = st.selectbox("Select Startgroup to filter the Average Speed per Section and Gender Graph", ["All"] + startgroups)
 
 with cols[0]:
     if (selstartgrp == "All") or (selstartgrp == None):
@@ -283,3 +283,86 @@ with cols[0]:
     st.write("""Showing the average speed per section and start group. Note that it is the average speed on the section
     up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
 
+st.divider()
+
+### ---------------------- Year over Year Comparison  -----------------------
+# Pickers and Headers.
+st.header("Year over Year Comparison:")
+df_start_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","gender","startnr"]].groupby(by=["year", "gender"]).count().reset_index()
+
+df_breaks_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startnr"]].groupby(by=["year"]).count()
+df_breaks_year["finish"] = df_full[df_full.control=="Finish"].drop_duplicates(subset=["year", "startnr"])[["year", "startnr"]].groupby(by=["year"]).count()
+df_breaks_year["break_offs"] = df_breaks_year.startnr - df_breaks_year.finish
+df_breaks_year = df_breaks_year.reset_index()
+
+cols = st.columns(2)
+with cols[0]:
+    fig = px.bar(df_start_year, x="year", y="startnr",
+                 labels={'startnr': '# Participants', 'year': 'Year'},
+                 title="# Participants per Year (starting)", color="gender",
+                 color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+with cols[1]:
+    fig = px.bar(df_breaks_year, x="year", y="break_offs",
+                 labels={'break_offs': '# participants', 'year': 'Year'},
+                 title="# Break-offs per Year",
+                 color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+
+
+cols = st.columns(2)
+with cols[0]:
+    fig = px.violin(df_full[df_full.control == "Finish"].sort_values(by="year"), x="year", y="duration_h",
+                    title="Finish Time Distribution per Year",
+                    labels={'duration_h': 'Duration Hours', 'year': 'Year'},
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+
+with cols[1]:
+    fig = px.scatter(df_full[df_full.control=="Finish"], y="placement", x="duration_h", color="year",
+                     title="Placement vs Finish Time per Year",
+                     labels={'duration_h': 'Duration Hours', 'placement': 'Placement'},
+                     color_discrete_sequence=px.colors.qualitative.Set3)
+
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+
+
+
+
+st.divider()
+
+### ---------------------- Individual Comparison  -----------------------
+# Pickers and Headers.
+st.header("Individual Results Comparison:")
+
+selected_names = st.multiselect('Add names that you want to compare', df.name.unique())
+
+cols = st.columns(2)
+with cols[0]:
+    fig = px.line(df[(df.control != "Start") & (df.name.isin(selected_names))], x="control", y="avg_speed_kmh",
+                      color="name", title='Average Speed per Section',
+                      labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
+                        color_discrete_sequence=px.colors.qualitative.Set3)
+
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+with cols[1]:
+    fig = px.bar(df[(df.control != "Start") & (df.name.isin(selected_names))], x="control", y="d_duration_m",
+                  color="name", title='Average Duration per Section',barmode="group",
+                  labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'},
+                  color_discrete_sequence=px.colors.qualitative.Set3)
+
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+
+# Add Placement Information
+with cols[0]:
+    fig = px.line(df[(df.control != "Start") & (df.name.isin(selected_names))], x="control", y="placement",
+                      color="name", title='Total Placement per Control',
+                      labels={"placement": "Placement", 'control': 'Controlpoint'},
+                        color_discrete_sequence=px.colors.qualitative.Set3)
+
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+
+st.divider()
