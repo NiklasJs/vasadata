@@ -11,7 +11,7 @@ from utils import custom_widgets as cw
 def read_data(available_years):
     tmp = pd.DataFrame(columns=['placement', 'placement_gender', 'startnr', 'name', 'name_startnr', 'class', 'club', 'time', 'gender',
        'control', 'year', 'country', 'duration_s', 'duration_h', 'duration_m', 'startgroup',
-       'd_duration_s', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
+       'd_duration_s', 'd_duration_m', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
        'd_descent', 'avg_speed_kmh', 'avg_speed_minkm'])
     for year in available_years:
         tmp = pd.concat([tmp, pd.read_parquet("data/" + str(year) + "_full.parquet")], ignore_index=True)
@@ -82,30 +82,42 @@ females = len(df[df.gender=="W"].startnr.unique())
 males = len(df[df.gender=="M"].startnr.unique())
 grp_row = df.loc[df.control==first_controlpoint, ["startnr", "startgroup"]].groupby("startgroup").count().reindex(startgroups)
 df_finish = df[df.control=="Finish"]
+df_finish["medal"] =  0
+df_finish.loc[(df_finish.gender=="M") & (df_finish.duration_s<=(df_finish[df_finish.gender=="M"].duration_s.min()*1.5)), "medal"] = 1
+df_finish.loc[(df_finish.gender=="W") & (df_finish.duration_s<=(df_finish[df_finish.gender=="W"].duration_s.min()*1.5)), "medal"] = 1
+female_medalists = df_finish[df_finish.gender=="W"].medal.sum()
+male_medalists = df_finish[df_finish.gender=="M"].medal.sum()
+df_finish_medal = df_finish[["startgroup", "medal"]].groupby(by="startgroup").sum().reset_index()
 
 # Data Contents Layout
-cols = st.columns(3)
+cols = st.columns(5)
 with cols[0]:
     cw.number_card(start_participants, "Total Participants")
 with cols[1]:
-    cw.number_card_tworow(females, str(round(100 * females / start_participants, 1)) + "%",
-                          "Female Participants")
-with cols[2]:
     cw.number_card_tworow(males, str(round(100 * males / start_participants, 1)) + "%",
                           "Male Participants")
+with cols[2]:
+    cw.number_card_tworow(male_medalists, str(round(100 * male_medalists / males, 1)) + "%",
+                          "Male Medalists (1.5x winning time)")
+with cols[3]:
+    cw.number_card_tworow(females, str(round(100 * females / start_participants, 1)) + "%",
+                          "Female Participants")
+with cols[4]:
+    cw.number_card_tworow(female_medalists, str(round(100 * female_medalists / females, 1)) + "%",
+                          "Female Medalists (1.5x winning time)")
 
 cols = st.columns(2)
 with cols[0]:
     fig = px.histogram(df_finish, x="duration_h", title="Total Finish time distribution",
                        labels={'duration_h': 'Duration Hours', 'count': '# Participants'},
-                    color_discrete_sequence=px.colors.qualitative.Set3)
+                       color_discrete_sequence=px.colors.qualitative.Set3)
 
     fig.update_traces(xbins=dict(start=3.5, end=13.5, size=0.5))
 
-    st.plotly_chart(fig, use_container_width=True, config = plotly_config)
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
 
     st.write("""Histogram showing the distibution of finish times of all participants in blocks of 30mins.
-              I.e. the bar at 6-6.5h shows the amount of participants finishing the race in 6-6.5 hours """)
+                      I.e. the bar at 6-6.5h shows the amount of participants finishing the race in 6-6.5 hours """)
 with cols[1]:
     fig = px.scatter(df_finish, y="placement_gender", x="duration_h", color="gender",
                                title="Placement vs Finish Time",
@@ -120,17 +132,23 @@ with cols[1]:
 cols = st.columns(2)
 with cols[0]:
     fig = px.bar(grp_row, x=grp_row.index, y="startnr",
-                title="Participants per Start Group",
-                labels={'startnr': '# Participants', 'startgroup': 'Row'},
+                title="Participants and Medalists per Start Group",
+                labels={'startnr': '# Participants', 'startgroup': 'Row'},barmode='overlay',
                 color_discrete_sequence=px.colors.qualitative.Set3)
+
+    fig.add_trace(
+        go.Bar(name="Medalists", x=df_finish_medal.startgroup, y=df_finish_medal.medal, marker_color=px.colors.qualitative.Set3[1]))
+
     fig.update_layout(xaxis_type='category')
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
-    st.write("""Plot showing number of starting participants at each start-group of vasaloppet.""")
+    st.write("""Plot showing number of starting participants at each start-group of vasaloppet, and number of medalists per startgroup (yellow overlay)""")
+
 with cols[1]:
     fig = px.violin(df_finish.sort_values(by="startgroup"), x="startgroup", y="duration_h",
                               title="Finish Time Distribution per Start Group",
                               labels={'duration_h': 'Duration Hours', 'startgroup': 'Row'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
+
     fig.update_layout(xaxis_type='category')
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Violin-plot showing the finish time distributions per starting group. Where the "violin" is as thickest means that most participants from that start-group finished in that time. 
