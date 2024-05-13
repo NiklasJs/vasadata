@@ -8,7 +8,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from utils import custom_widgets as cw
 
-@st.cache_data
 def read_data(available_years):
     tmp = pd.DataFrame(columns=['placement', 'placement_gender', 'startnr', 'name', 'name_startnr', 'class', 'club', 'time', 'gender',
        'control', 'year', 'country', 'duration_s', 'duration_h', 'duration_m', 'startgroup',
