@@ -5,12 +5,12 @@ import re
 import math
 from matplotlib import colormaps
 import plotly.express as px
-from PIL import Image
+import plotly.graph_objects as go
 from utils import custom_widgets as cw
 
 @st.cache_data
 def read_data(available_years):
-    tmp = pd.DataFrame(columns=['placement', 'placement_gender', 'startnr', 'name', 'class', 'club', 'time', 'gender',
+    tmp = pd.DataFrame(columns=['placement', 'placement_gender', 'startnr', 'name', 'name_startnr', 'class', 'club', 'time', 'gender',
        'control', 'year', 'country', 'duration_s', 'duration_h', 'duration_m', 'startgroup',
        'd_duration_s', 'd_duration_m', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
        'd_descent', 'avg_speed_kmh', 'avg_speed_minkm'])
@@ -46,7 +46,7 @@ df_full["startgroup"] = pd.Categorical(df_full["startgroup"], categories=startgr
 sortorder = ["Start", "High Point", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
 df_full["control"] = pd.Categorical(df_full["control"], categories=sortorder, ordered=True)
 
-for col in ["startnr", "name"]:
+for col in ["startnr", "name", "name_startnr"]:
     df_full[col] = df_full[col].astype("string")
 
 ### ---------------------- Start of Page -----------------------
@@ -234,7 +234,7 @@ st.divider()
 
 ### ---------------------- Section Analysis  -----------------------
 # Pickers and Headers.
-st.header("Section Analysis:")
+st.header("Section & Other Analyses:")
 
 df_speed = df.loc[df.avg_speed_kmh<40,["control","startgroup", "avg_speed_kmh"]].groupby(by=["control","startgroup"]).mean().reset_index()
 df_speed_gender = df.loc[df.avg_speed_kmh<40,["control","gender", "avg_speed_kmh"]].groupby(by=["control","gender"]).mean().reset_index()
@@ -260,20 +260,21 @@ with cols[1]:
 
 cols = st.columns(2)
 with cols[1]:
-    st.markdown("#")
-    st.markdown("#")
-    st.markdown("#")
-    st.markdown("#")
-    st.markdown("#")
-    selstartgrp = st.selectbox("Select Startgroup to filter the Average Speed per Section and Gender Graph", ["All"] + startgroups)
+    places = pd.merge(df.loc[df.control=="Finish", ["name_startnr","startgroup", "placement", "placement_gender"]],
+                      df.loc[df.control==first_controlpoint, ["name_startnr", "placement", "placement_gender"]],
+                      how='left', on='name_startnr')
+    places["delta_placements"] = (places.placement_y - places.placement_x)
+    places["delta_placements_gender"] = (places.placement_gender_y - places.placement_gender_x)
+    places = places.sort_values(by="delta_placements", ascending=False).reset_index()
+    places = places[["name_startnr","startgroup", "placement_x", "delta_placements", "delta_placements_gender"]]
+    places.columns = ["Name (startnr)","Startgroup", "Final Placement", "Places Gained/Lost", "Places Gained/Lost Gender"]
+    st.write("#### Places Gained/Lost")
+    st.write(places)
+    st.write("""Utilize the headers to re-sort the graph to look at most places gained/lost. A positive number means position improvement
+    If you hover over the table, a search icon will appear in the top right where you can search for specific individuals""")
 
 with cols[0]:
-    if (selstartgrp == "All") or (selstartgrp == None):
-        df_speed_gender = df.loc[df.avg_speed_kmh < 40, ["control", "gender", "avg_speed_kmh"]].groupby(
-            by=["control", "gender"]).mean().reset_index()
-    else:
-        df_speed_gender = df.loc[(df.avg_speed_kmh < 40) & (df.startgroup == selstartgrp), ["control", "gender", "avg_speed_kmh"]].groupby(
-            by=["control", "gender"]).mean().reset_index()
+    df_speed_gender = df.loc[df.avg_speed_kmh < 40, ["control", "gender", "avg_speed_kmh"]].groupby(by=["control", "gender"]).mean().reset_index()
 
     fig = px.line(df_speed_gender[(df_speed_gender.control != "Start")], x="control", y="avg_speed_kmh",
                   color="gender", title='Average Speed per Section and Gender',
@@ -282,6 +283,55 @@ with cols[0]:
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
     st.write("""Showing the average speed per section and start group. Note that it is the average speed on the section
     up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
+
+st.divider()
+
+### ---------------------- Individual Comparison  -----------------------
+# Pickers and Headers.
+st.header("Individual Results Comparison:")
+
+selected_names = st.multiselect('Add names that you want to compare', df.name_startnr.unique())
+
+cols = st.columns(2)
+with cols[0]:
+    fig = px.line(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="avg_speed_kmh",
+                      color="name", title='Average Speed per Section',
+                      labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
+                        color_discrete_sequence=px.colors.qualitative.Set3)
+
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+with cols[1]:
+    fig = px.bar(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="d_duration_m",
+                  color="name", title='Average Duration per Section',barmode="group",
+                  labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'},
+                  color_discrete_sequence=px.colors.qualitative.Set3)
+
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+
+# Add Placement Information
+with cols[0]:
+    fig = px.line(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="placement",
+                      color="name", title='Total Placement per Control',
+                      labels={"placement": "Placement", 'control': 'Controlpoint'},
+                        color_discrete_sequence=px.colors.qualitative.Set3)
+
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+
+with cols[1]:
+    fig = px.line(df_speed[df_speed.control != "Start"], x="control", y="avg_speed_kmh",
+                  color="startgroup", title='Selected Participants Speed vs Avg per Startgroup',
+                  labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
+                  color_discrete_sequence=px.colors.qualitative.Pastel1)
+
+
+    for i, name in enumerate(selected_names):
+        tmp = df.loc[(df.control!="Start")&(df.name_startnr==name), ["control","avg_speed_kmh"]]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.avg_speed_kmh, name=name,
+                                 line=dict(width=5, dash='dot', color=px.colors.qualitative.Light24[i])))
+
+    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+    st.write("""Showing the average speed per section and start group. Note that it is the average speed on the section
+        up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
 
 st.divider()
 
@@ -334,35 +384,3 @@ with cols[1]:
 
 st.divider()
 
-### ---------------------- Individual Comparison  -----------------------
-# Pickers and Headers.
-st.header("Individual Results Comparison:")
-
-selected_names = st.multiselect('Add names that you want to compare', df.name.unique())
-
-cols = st.columns(2)
-with cols[0]:
-    fig = px.line(df[(df.control != "Start") & (df.name.isin(selected_names))], x="control", y="avg_speed_kmh",
-                      color="name", title='Average Speed per Section',
-                      labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-
-    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
-with cols[1]:
-    fig = px.bar(df[(df.control != "Start") & (df.name.isin(selected_names))], x="control", y="d_duration_m",
-                  color="name", title='Average Duration per Section',barmode="group",
-                  labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'},
-                  color_discrete_sequence=px.colors.qualitative.Set3)
-
-    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
-
-# Add Placement Information
-with cols[0]:
-    fig = px.line(df[(df.control != "Start") & (df.name.isin(selected_names))], x="control", y="placement",
-                      color="name", title='Total Placement per Control',
-                      labels={"placement": "Placement", 'control': 'Controlpoint'},
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-
-    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
-
-st.divider()
