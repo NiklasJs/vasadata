@@ -303,7 +303,7 @@ with cols[0]:
 with cols[1]:
     fig = px.bar(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="d_duration_m",
                   color="name", title='Average Duration per Section',barmode="group",
-                  labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'},
+                  labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'}, range_y=[0,180],
                   color_discrete_sequence=px.colors.qualitative.Set3)
 
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
