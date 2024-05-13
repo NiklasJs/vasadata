@@ -32,7 +32,7 @@ available_years = [2018, 2019, 2020, 2022, 2023, 2024]
 
 df_full = read_data(available_years=available_years)
 
-for col in ["placement", "placement_gender", "year", "duration_s", "duration_m", "duration_h", "d_duration_s", "height_m",
+for col in ["placement", "placement_gender", "year", "duration_s", "duration_m", "duration_h", "d_duration_s", "d_duration_m","height_m",
             "distance_km", "d_distance_km", "d_ascent", "d_descent", "avg_speed_kmh", "avg_speed_minkm"]:
     df_full[col] = pd.to_numeric(df_full[col])
 
