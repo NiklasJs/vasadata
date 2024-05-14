@@ -123,8 +123,8 @@ with cols[1]:
                                title="Placement vs Finish Time",
                                labels={'duration_h': 'Duration Hours', 'placement_gender': 'Placement'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
-
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+
 
     st.write("""Plot showing the relationship between finish time and position in the race for men and women.
                   Hover over the plots x-axis to see what a certain time would have given you as a placement (y-axis) """)
@@ -305,9 +305,17 @@ st.divider()
 
 ### ---------------------- Individual Comparison  -----------------------
 # Pickers and Headers.
-st.header("Individual Results Comparison:")
+st.header("Individual Results Analysis & Comparison:")
 
-selected_names = st.multiselect('Add names that you want to compare', df.name_startnr.unique())
+cols = st.columns(2)
+
+df_avg_startgroup = df.loc[(df.avg_speed_kmh<40)&(df.control!="Start"),["control","startgroup", "avg_speed_kmh", "d_duration_m", "placement"]].groupby(by=["control","startgroup"]).mean().reset_index()
+
+with cols[0]:
+    selected_names = st.multiselect('Add names that you want to analyse and/or compare', df.name_startnr.unique())
+with cols[1]:
+    selected_groups = st.multiselect('Add Startgroup averages as comparisons', df.startgroup.unique().sort_values())
+
 
 cols = st.columns(2)
 with cols[0]:
@@ -316,12 +324,24 @@ with cols[0]:
                       labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
                         color_discrete_sequence=px.colors.qualitative.Set3)
 
+    for i, group in enumerate(selected_groups):
+        tmp = df_avg_startgroup[(df_avg_startgroup.startgroup==group) & (df_avg_startgroup.control!="Start")]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.avg_speed_kmh, name=group,
+                                 line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
+
+    fig.update_layout(xaxis_type='category')
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
+    st.write("""Plot showing number of starting participants at each start-group of vasaloppet, and number of medalists per startgroup (yellow overlay)""")
 with cols[1]:
     fig = px.bar(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="d_duration_m",
                   color="name", title='Average Duration per Section',barmode="group",
                   labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'}, range_y=[0,180],
                   color_discrete_sequence=px.colors.qualitative.Set3)
+
+    for i, group in enumerate(selected_groups):
+        tmp = df_avg_startgroup[(df_avg_startgroup.startgroup==group) & (df_avg_startgroup.control!="Start")]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.d_duration_m, name=group,
+                                 line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
 
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
 
@@ -332,23 +352,17 @@ with cols[0]:
                       labels={"placement": "Placement", 'control': 'Controlpoint'},
                         color_discrete_sequence=px.colors.qualitative.Set3)
 
+    for i, group in enumerate(selected_groups):
+        tmp = df_avg_startgroup[(df_avg_startgroup.startgroup==group) & (df_avg_startgroup.control!="Start")]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.placement, name=group,
+                                 line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
+
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
 
 with cols[1]:
-    fig = px.line(df_speed[df_speed.control != "Start"], x="control", y="avg_speed_kmh",
-                  color="startgroup", title='Selected Participants Speed vs Avg per Startgroup',
-                  labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
-                  color_discrete_sequence=px.colors.qualitative.Pastel1)
+    st.write("#### Table View of Selected Data")
+    st.dataframe(df.loc[(df.control == "Finish") & (df.name_startnr.isin(selected_names)),["name_startnr","startgroup","club", "time", "placement", "placement_gender"]], hide_index=True)
 
-
-    for i, name in enumerate(selected_names):
-        tmp = df.loc[(df.control!="Start")&(df.name_startnr==name), ["control","avg_speed_kmh"]]
-        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.avg_speed_kmh, name=name,
-                                 line=dict(width=5, dash='dot', color=px.colors.qualitative.Light24[i])))
-
-    st.plotly_chart(fig, use_container_width=True, config=plotly_config)
-    st.write("""Showing the average speed per section and start group. Note that it is the average speed on the section
-        up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
 
 st.divider()
 
