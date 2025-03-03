@@ -9,6 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 
+
 ### KPI visualizations ###
 def number_card(toptxt, subtext):
     st.markdown("""
@@ -265,9 +266,11 @@ def volume_card(data, tpin):
     with st.expander(f'Edit Volumes, current units: {data.units.sum():.0f}', False):
         for i, cust_size in enumerate(data.deals_size_basket.unique()):
             tmp = data[data.deals_size_basket == cust_size].copy()
-            st.markdown('<p class="sub-header-volcard">'+f'Customer Segment: {cust_size}'+'</p>', unsafe_allow_html=True)
-            units[cust_size] = st.number_input(f'Units: {tmp.units.sum()} | NS: {tmp.new_tns.sum():.0f} | TSR%%: {-tmp.new_tsr_pct.sum():.1f}:',
-                                               value=int(tpin.loc[tpin.deals_size_basket==cust_size, 'units'].sum()))
+            st.markdown('<p class="sub-header-volcard">' + f'Customer Segment: {cust_size}' + '</p>',
+                        unsafe_allow_html=True)
+            units[cust_size] = st.number_input(
+                f'Units: {tmp.units.sum()} | NS: {tmp.new_tns.sum():.0f} | TSR%%: {-tmp.new_tsr_pct.sum():.1f}:',
+                value=int(tpin.loc[tpin.deals_size_basket == cust_size, 'units'].sum()))
 
     return units
 
@@ -377,7 +380,8 @@ def plot_option_net_scatter_plotly(data):
     # st.write(dd.head())
 
     # Reorder data based on deals_size_basket (mainly for the legend order in plotly)
-    active_basket = [basket for basket in ['-0', '1-2', '3-5', '6-10', '11-30', '31-99', '100+', 'Private dealer stock order', 'Unknown'] if
+    active_basket = [basket for basket in
+                     ['-0', '1-2', '3-5', '6-10', '11-30', '31-99', '100+', 'Private dealer stock order', 'Unknown'] if
                      basket in dd['Customer Size'].unique()]
     # st.write(active_basket)
     # st.write(dd['Customer Size'].unique())
@@ -412,7 +416,7 @@ def plot_option_net_scatter_plotly(data):
                                  'Customer Size': False,
                                  'Customer Name': True,
                                  'Order Number': True,
-                                 #'TSR%': ':.2%' removed due to not beeing true TSR, it is excluding CA/EII
+                                 # 'TSR%': ':.2%' removed due to not beeing true TSR, it is excluding CA/EII
                                  })
 
     # Prettify the markers
