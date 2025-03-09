@@ -11,6 +11,7 @@ from utils import custom_widgets as cw
 import warnings
 warnings.filterwarnings("ignore")
 
+@st.cache_data
 def read_data(available_years):
     tmp = pd.DataFrame(columns=['placement', 'placement_gender', 'startnr', 'name', 'name_startnr', 'class', 'club', 'time', 'gender',
        'control', 'year', 'country', 'duration_s', 'duration_h', 'duration_m', 'startgroup',
@@ -32,7 +33,10 @@ with open('style.css') as f:
 # Data load & data management
 available_years = [2018, 2019, 2020, 2022, 2023, 2024, 2025]
 
-df_full = read_data(available_years=available_years)
+if 'data' not in st.session_state:
+    st.session_state['data'] = read_data(available_years=available_years)
+
+df_full = st.session_state['data']
 
 for col in ["placement", "placement_gender", "year", "duration_s", "duration_m", "duration_h", "d_duration_s", "d_duration_m","height_m",
             "distance_km", "d_distance_km", "d_ascent", "d_descent", "avg_speed_kmh", "avg_speed_minkm"]:
@@ -50,6 +54,8 @@ df_full["control"] = pd.Categorical(df_full["control"], categories=sortorder, or
 
 for col in ["startnr", "name", "name_startnr"]:
     df_full[col] = df_full[col].astype("string")
+
+st.session_state['data'] = df_full
 
 ### ---------------------- Start of Page -----------------------
 # Calculations
