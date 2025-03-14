@@ -380,7 +380,7 @@ st.divider()
 ### ---------------------- Year over Year Comparison  -----------------------
 # Pickers and Headers.
 st.header("Year over Year Comparison:")
-df_start_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","gender","startnr"]].groupby(by=["year", "gender"]).count().reset_index()
+df_start_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startgroup","startnr"]].groupby(by=["year", "startgroup"]).count().reset_index()
 
 df_breaks_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startnr"]].groupby(by=["year"]).count()
 df_breaks_year["finish"] = df_full[df_full.control=="Finish"].drop_duplicates(subset=["year", "startnr"])[["year", "startnr"]].groupby(by=["year"]).count()
@@ -391,7 +391,7 @@ cols = st.columns(2)
 with cols[0]:
     fig = px.bar(df_start_year, x="year", y="startnr",
                  labels={'startnr': '# Participants', 'year': 'Year'},
-                 title="# Participants per Year (starting)", color="gender",
+                 title="# Participants per Year (starting)", color="startgroup",
                  color_discrete_sequence=px.colors.qualitative.Set3)
     fig.update_layout(xaxis_type='category')
     st.plotly_chart(fig, use_container_width=True, config=plotly_config)
