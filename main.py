@@ -57,6 +57,34 @@ startgroups = ["Elit","1","2","3","4","5","6","7","8","9","10"]
 control_points = ["Start", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
 sortorder = ["Start", "High Point", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
 
+# Vasaloppet.TV checkpoint webcam URLs per year
+# These link to the fixed camera recordings at each checkpoint on vasaloppet.tv
+webcam_urls = {
+    2026: {
+        "Start": "https://vasaloppet.tv/video/1115868/vlstsa2026/",
+        "Smågan": "https://vasaloppet.tv/video/1115876/vlsm2026/",
+        "Mångsbodarna": "https://vasaloppet.tv/video/1115880/vlma2026/",
+        "Evertsberg": "https://vasaloppet.tv/video/1115888/vlev2026/",
+        "Oxberg": "https://vasaloppet.tv/video/1115892/vlox2026/",
+        "Hökberg": "https://vasaloppet.tv/video/1115896/vlho2026/",
+        "Eldris": "https://vasaloppet.tv/video/1115900/vlel2026/",
+        "Finish": "https://vasaloppet.tv/video/1115904/vlmo2026/",
+    },
+    2025: {
+        "High Point": "https://vasaloppet.tv/video/1114595/hogsta-punkten-vasaloppet-2025/",
+        "Smågan": "https://vasaloppet.tv/video/1114600/smagan-vasaloppet-2025/",
+        "Risberg": "https://vasaloppet.tv/video/1114610/risberg-vasaloppet-2025/",
+        "Evertsberg": "https://vasaloppet.tv/video/1114615/evertsberg-vasaloppet-2025/",
+        "Oxberg": "https://vasaloppet.tv/video/1114620/oxberg-vasaloppet-2025/",
+        "Hökberg": "https://vasaloppet.tv/video/1114625/hokberg-vasaloppet-2025/",
+        "Eldris": "https://vasaloppet.tv/video/1114630/eldris-vasaloppet-2025/",
+    },
+    2024: {
+        "Smågan": "https://vasaloppet.tv/video/1113422/smagan-vasaloppet-2024/",
+        "Finish": "https://vasaloppet.tv/video/1113437/malgang-i-mora-vasaloppet-2024/",
+    },
+}
+
 if 'data' not in st.session_state:
     st.session_state['data'] = read_data(available_years=available_years, startgroups=startgroups, control_points=control_points, sortorder=sortorder)
 
@@ -382,6 +410,34 @@ with cols[0]:
 with cols[1]:
     st.write("#### Table View of Selected Data")
     st.dataframe(df.loc[(df.control == "Finish") & (df.name_startnr.isin(selected_names)),["name_startnr","startgroup","club", "time", "placement", "placement_gender"]], hide_index=True)
+
+# Webcam correlation section
+year_urls = webcam_urls.get(year, {})
+if selected_names and year_urls:
+    st.write("#### Checkpoint Webcam Correlation")
+    st.caption("Watch participants pass each checkpoint on [Vasaloppet.TV](https://vasaloppet.tv). "
+               "The approx. clock time helps you scrub to the right moment in the video player (race starts ~08:00, later start groups depart slightly after).")
+
+    for name in selected_names:
+        df_person = df[(df.name_startnr == name)].sort_values("control").copy()
+        if not df_person.empty:
+            df_webcam = df_person[["control", "time", "duration_s"]].copy()
+            df_webcam["Clock Time (approx)"] = (
+                pd.to_datetime("08:00:00") + pd.to_timedelta(df_webcam["duration_s"], unit="s")
+            ).dt.strftime("%H:%M:%S")
+            df_webcam["Webcam"] = df_webcam["control"].map(year_urls)
+            df_webcam = df_webcam[df_webcam["Webcam"].notna()].copy()
+            if not df_webcam.empty:
+                display_df = df_webcam[["control", "time", "Clock Time (approx)", "Webcam"]].copy()
+                display_df.columns = ["Checkpoint", "Elapsed Time", "Clock Time (approx)", "Webcam"]
+                st.write(f"**{name}**")
+                st.dataframe(
+                    display_df,
+                    column_config={
+                        "Webcam": st.column_config.LinkColumn("Webcam", display_text="Watch on Vasaloppet.TV"),
+                    },
+                    hide_index=True,
+                )
 
 st.divider()
 
