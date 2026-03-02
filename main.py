@@ -12,7 +12,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 @st.cache_data
-def read_data(available_years):
+def read_data(available_years, startgroups, control_points, sortorder):
     
     # Merge all parquets
     df_full = pd.concat([pd.read_parquet(f"data/{year}_full.parquet") for year in available_years], ignore_index=True)
@@ -30,10 +30,10 @@ def read_data(available_years):
     for col in ["class", "club", "gender", "country"]:
         df_full[col] = df_full[col].astype("category")
 
-    startgroups = ["Elit","1","2","3","4","5","6","7","8","9","10"]
+    
     df_full["startgroup"] = pd.Categorical(df_full["startgroup"], categories=startgroups, ordered=True)
 
-    sortorder = ["Start", "High Point", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
+    
     df_full["control"] = pd.Categorical(df_full["control"], categories=sortorder, ordered=True)
 
     for col in ["startnr", "name", "name_startnr"]:
@@ -41,7 +41,7 @@ def read_data(available_years):
     
     return df_full
 
-control_points = ["Start", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
+
 
 # Page setting
 st.set_page_config(layout="wide", page_title="VasaData - Vasaloppet Results")
@@ -53,9 +53,12 @@ with open('style.css') as f:
 
 # Data load & data management
 available_years = [2018, 2019, 2020, 2022, 2023, 2024, 2025, 2026]
+startgroups = ["Elit","1","2","3","4","5","6","7","8","9","10"]
+control_points = ["Start", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
+sortorder = ["Start", "High Point", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
 
 if 'data' not in st.session_state:
-    st.session_state['data'] = read_data(available_years=available_years)
+    st.session_state['data'] = read_data(available_years=available_years, startgroups=startgroups, control_points=control_points, sortorder=sortorder)
 
 df_full = st.session_state['data']
 
