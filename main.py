@@ -267,54 +267,54 @@ st.divider()
 ### ---------------------- Section Analysis  -----------------------
 # Pickers and Headers.
 st.header("Section, High Point & Overtake Analysis:")
-with st.expander("Section, High Point & Overtake Analysis - Click to expand!"):
-    df_speed = df.loc[df.avg_speed_kmh<40,["control","startgroup", "avg_speed_kmh"]].groupby(by=["control","startgroup"]).mean().reset_index()
-    df_speed_gender = df.loc[df.avg_speed_kmh<40,["control","gender", "avg_speed_kmh"]].groupby(by=["control","gender"]).mean().reset_index()
 
-    cols = st.columns(2)
-    with cols[0]:
-        fig = px.line(df_speed[df_speed.control != "Start"], x="control", y="avg_speed_kmh",
-                    color="startgroup", title='Average Speed per Section and Startgroup',
-                    labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-        st.write("""Showing the average speed per section and start group. Note that it is the average speed on the section
-        up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
+df_speed = df.loc[df.avg_speed_kmh<40,["control","startgroup", "avg_speed_kmh"]].groupby(by=["control","startgroup"]).mean().reset_index()
+df_speed_gender = df.loc[df.avg_speed_kmh<40,["control","gender", "avg_speed_kmh"]].groupby(by=["control","gender"]).mean().reset_index()
 
-    with cols[1]:
-        fig = px.violin(df[df.control==first_controlpoint].sort_values(by="startgroup"), x="startgroup", y="duration_m",
-                                    title=f'Time to reach {first_controlpoint} per Start Row',
-                                    labels={'duration_m': 'Duration Minutes', 'startgroup': 'Row'},
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-        fig.update_layout(xaxis_type='category')
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-        st.write(f'Violin-plot showing the time distribution to reach {first_controlpoint}, from different start-groups.')
+cols = st.columns(2)
+with cols[0]:
+    fig = px.line(df_speed[df_speed.control != "Start"], x="control", y="avg_speed_kmh",
+                color="startgroup", title='Average Speed per Section and Startgroup',
+                labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+    st.write("""Showing the average speed per section and start group. Note that it is the average speed on the section
+    up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
 
-    cols = st.columns(2)
-    with cols[1]:
-        places = pd.merge(df.loc[df.control=="Finish", ["name_startnr","startgroup", "placement", "placement_gender"]],
-                        df.loc[df.control==first_controlpoint, ["name_startnr", "placement", "placement_gender"]],
-                        how='left', on='name_startnr')
-        places["delta_placements"] = (places.placement_y - places.placement_x)
-        places["delta_placements_gender"] = (places.placement_gender_y - places.placement_gender_x)
-        places = places.sort_values(by="delta_placements", ascending=False).reset_index()
-        places = places[["name_startnr","startgroup", "placement_x", "delta_placements", "delta_placements_gender"]]
-        places.columns = ["Name (startnr)","Startgroup", "Final Placement", "Places Gained/Lost", "Places Gained/Lost Gender"]
-        st.write("#### Places Gained/Lost")
-        st.write(places)
-        st.write("""Utilize the headers to re-sort the graph to look at most places gained/lost. A positive number means position improvement
-        If you hover over the table, a search icon will appear in the top right where you can search for specific individuals""")
+with cols[1]:
+    fig = px.violin(df[df.control==first_controlpoint].sort_values(by="startgroup"), x="startgroup", y="duration_m",
+                                title=f'Time to reach {first_controlpoint} per Start Row',
+                                labels={'duration_m': 'Duration Minutes', 'startgroup': 'Row'},
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+    st.write(f'Violin-plot showing the time distribution to reach {first_controlpoint}, from different start-groups.')
 
-    with cols[0]:
-        df_speed_gender = df.loc[df.avg_speed_kmh < 40, ["control", "gender", "avg_speed_kmh"]].groupby(by=["control", "gender"]).mean().reset_index()
+cols = st.columns(2)
+with cols[1]:
+    places = pd.merge(df.loc[df.control=="Finish", ["name_startnr","startgroup", "placement", "placement_gender"]],
+                    df.loc[df.control==first_controlpoint, ["name_startnr", "placement", "placement_gender"]],
+                    how='left', on='name_startnr')
+    places["delta_placements"] = (places.placement_y - places.placement_x)
+    places["delta_placements_gender"] = (places.placement_gender_y - places.placement_gender_x)
+    places = places.sort_values(by="delta_placements", ascending=False).reset_index()
+    places = places[["name_startnr","startgroup", "placement_x", "delta_placements", "delta_placements_gender"]]
+    places.columns = ["Name (startnr)","Startgroup", "Final Placement", "Places Gained/Lost", "Places Gained/Lost Gender"]
+    st.write("#### Places Gained/Lost")
+    st.write(places)
+    st.write("""Utilize the headers to re-sort the graph to look at most places gained/lost. A positive number means position improvement
+    If you hover over the table, a search icon will appear in the top right where you can search for specific individuals""")
 
-        fig = px.line(df_speed_gender[(df_speed_gender.control != "Start")], x="control", y="avg_speed_kmh",
-                    color="gender", title='Average Speed per Section and Gender',
-                    labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-        st.write("""Showing the average speed per section and Gender. Note that it is the average speed on the section
-        up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
+with cols[0]:
+    df_speed_gender = df.loc[df.avg_speed_kmh < 40, ["control", "gender", "avg_speed_kmh"]].groupby(by=["control", "gender"]).mean().reset_index()
+
+    fig = px.line(df_speed_gender[(df_speed_gender.control != "Start")], x="control", y="avg_speed_kmh",
+                color="gender", title='Average Speed per Section and Gender',
+                labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+    st.write("""Showing the average speed per section and Gender. Note that it is the average speed on the section
+    up to the control, so the linegraph at Smågan shows the average speed between High Point and Smågan.""")
 
 st.divider()
 ### ---------------------- Individual Comparison  -----------------------
