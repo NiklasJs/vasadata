@@ -95,10 +95,15 @@ else:
     first_controlpoint = "High Point"
 
 # Calculations
+
+@st.cache_data
+def grp_row(first_controlpoint):
+    return df.loc[df.control==first_controlpoint, ["startnr", "startgroup"]].groupby("startgroup").count().reindex(startgroups)
+
 start_participants = len(df.startnr.unique())
 females = len(df[df.gender=="W"].startnr.unique())
 males = len(df[df.gender=="M"].startnr.unique())
-grp_row = df.loc[df.control==first_controlpoint, ["startnr", "startgroup"]].groupby("startgroup").count().reindex(startgroups)
+grp_row = grp_row(first_controlpoint)
 df_finish = df[df.control=="Finish"]
 df_finish["medal"] =  0
 df_finish.loc[(df_finish.gender=="M") & (df_finish.duration_s<=(df_finish[df_finish.gender=="M"].duration_s.min()*1.5)), "medal"] = 1
@@ -178,15 +183,21 @@ st.divider()
 st.header("DNF Analysis:")
 
 # Calculations
-finish_participants = len(df[df.control=="Finish"].startnr.unique())
-females_finishing = len(df[(df.control=="Finish")&(df.gender=="W")].startnr.unique())
-males_finishing = len(df[(df.control=="Finish")&(df.gender=="M")].startnr.unique())
+
+
+
+finish_participants = df[df.control=="Finish"].startnr.nunique()
+females_finishing = df[(df.control=="Finish")&(df.gender=="W")].startnr.nunique()
+males_finishing = df[(df.control=="Finish")&(df.gender=="M")].startnr.nunique()
+row_start = df.groupby(by="startgroup").startnr.nunique()
+row_finish = df[df.control=="Finish"].groupby(by="startgroup").startnr.nunique()
+row_delta = row_start - row_finish
 
 grp = df[(df["control"].isin(control_points))&(df.gender=="W")].groupby(by=["control"]).startnr.count().reindex(control_points)
-grp["Start"] = len(df[df.gender=="W"].startnr.unique())
+grp["Start"] = df[df.gender=="W"].startnr.nunique()
 female_breaks = -(grp - grp.shift(1))
 grp = df[(df["control"].isin(control_points))&(df.gender=="M")].groupby(by=["control"]).startnr.count().reindex(control_points)
-grp["Start"] = len(df[df.gender=="M"].startnr.unique())
+grp["Start"] = df[df.gender=="M"].startnr.nunique()
 male_breaks = -(grp - grp.shift(1))
 
 df_breaks = pd.DataFrame({"Total":female_breaks+male_breaks,
@@ -198,10 +209,6 @@ df_breaks_share = pd.DataFrame({"W":100*female_breaks/female_breaks.sum(),
                         "M":100*male_breaks/male_breaks.sum(),
                         }).reset_index().melt("control")
 df_breaks_share = df_breaks_share[df_breaks_share.control.isin(control_points[1:])]
-
-row_start = df.groupby(by="startgroup").startnr.nunique()
-row_finish = df[df.control=="Finish"].groupby(by="startgroup").startnr.nunique()
-row_delta = row_start - row_finish
 
 df_breaks_row = pd.DataFrame({"Starting":row_start,
                             "DNFs": row_start-row_finish,
@@ -259,8 +266,7 @@ with cols[1]:
                     color_discrete_sequence=px.colors.qualitative.Set3)
     fig.update_layout(xaxis_type='category')
     st.plotly_chart(fig, width='stretch', config=plotly_config)
-    st.write("""Showing the DNFs as a share of number of participants in that start-row.
-    I.e. if you start in row 10, how likely is it that you will abort the race.""")
+    st.write("""Showing the DNFs as a share of number of participants in that start-row""")
 
 st.divider()
 
@@ -383,12 +389,19 @@ st.divider()
 # Pickers and Headers.
 st.header("Year over Year Comparison:")
 
-df_start_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startgroup","startnr"]].groupby(by=["year", "startgroup"]).count().reset_index()
+@st.cache_data
+def calculate_start_years(df_full):
+    return df_full.drop_duplicates(subset=["year", "startnr"])[["year","startgroup","startnr"]].groupby(by=["year", "startgroup"]).count().reset_index()
 
-df_breaks_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startnr"]].groupby(by=["year"]).count()
-df_breaks_year["finish"] = df_full[df_full.control=="Finish"].drop_duplicates(subset=["year", "startnr"])[["year", "startnr"]].groupby(by=["year"]).count()
-df_breaks_year["break_offs"] = df_breaks_year.startnr - df_breaks_year.finish
-df_breaks_year = df_breaks_year.reset_index()
+@st.cache_data
+def calculate_breaks_years(df_full):
+    df_breaks_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startnr"]].groupby(by=["year"]).count()
+    df_breaks_year["finish"] = df_full[df_full.control=="Finish"].drop_duplicates(subset=["year", "startnr"])[["year", "startnr"]].groupby(by=["year"]).count()
+    df_breaks_year["break_offs"] = df_breaks_year.startnr - df_breaks_year.finish
+    return df_breaks_year.reset_index()
+
+df_start_year = calculate_start_years(df_full)
+df_breaks_year = calculate_breaks_years(df_full)
 
 cols = st.columns(2)
 with cols[0]:
@@ -400,8 +413,8 @@ with cols[0]:
     st.plotly_chart(fig, width='stretch', config=plotly_config)
 with cols[1]:
     fig = px.bar(df_breaks_year, x="year", y="break_offs",
-                labels={'break_offs': '# participants', 'year': 'Year'},
-                title="# Break-offs per Year",
+                labels={'break_offs': '# DNFs', 'year': 'Year'},
+                title="# DNFs per Year",
                 color_discrete_sequence=px.colors.qualitative.Set3)
     fig.update_layout(xaxis_type='category')
     st.plotly_chart(fig, width='stretch', config=plotly_config)
@@ -431,7 +444,11 @@ st.header("Individual Results Year over Year Analysis:")
 
 cols = st.columns(2)
 
-df_full_avg_startgroup = df_full.loc[(df_full.avg_speed_kmh<40)&(df_full.control!="Start"),["control","startgroup_year", "avg_speed_kmh", "d_duration_m", "placement"]].groupby(by=["control","startgroup_year"]).mean().reset_index()
+@st.cache_data
+def df_avg_startgroup_year(df_full):
+    return df_full.loc[(df_full.avg_speed_kmh<40)&(df_full.control!="Start"),["control","startgroup_year", "avg_speed_kmh", "d_duration_m", "placement"]].groupby(by=["control","startgroup_year"]).mean().reset_index()
+
+df_full_avg_startgroup = df_avg_startgroup_year(df_full)
 
 with cols[0]:
     selected_names_year = st.multiselect('Add names and years to analyse and/or compare', df_full.name_startnr_year.unique())
