@@ -13,12 +13,11 @@ warnings.filterwarnings("ignore")
 
 @st.cache_data
 def read_data(available_years):
-    tmp = pd.DataFrame(columns=['placement', 'placement_gender', 'startnr', 'name', 'name_startnr','name_startnr_year', 'class', 'club', 'time', 'gender',
+    tmp = pd.concat([pd.read_parquet(f"data/{year}_full.parquet") for year in available_years], ignore_index=True)
+    tmp.columns = ['placement', 'placement_gender', 'startnr', 'name', 'name_startnr','name_startnr_year', 'class', 'club', 'time', 'gender',
        'control', 'year', 'country', 'duration_s', 'duration_h', 'duration_m', 'startgroup','startgroup_year',
        'd_duration_s', 'd_duration_m', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
-       'd_descent', 'avg_speed_kmh', 'avg_speed_minkm'])
-    for year in available_years:
-        tmp = pd.concat([tmp, pd.read_parquet("data/" + str(year) + "_full.parquet")], ignore_index=True)
+       'd_descent', 'avg_speed_kmh', 'avg_speed_minkm']
     return tmp
 
 # Page setting
