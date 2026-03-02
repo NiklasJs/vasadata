@@ -23,6 +23,7 @@ def read_data(available_years):
 # Page setting
 st.set_page_config(layout="wide", page_title="VasaData - Vasaloppet Results")
 
+
 plotly_config = {'displayModeBar': False, 'scrollZoom':False }
 
 with open('style.css') as f:
