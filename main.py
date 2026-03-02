@@ -14,21 +14,19 @@ warnings.filterwarnings("ignore")
 @st.cache_data
 def read_data(available_years):
     tmp = pd.concat([pd.read_parquet(f"data/{year}_full.parquet") for year in available_years], ignore_index=True)
-    tmp.columns = ['placement', 'placement_gender', 'startnr', 'name', 'name_startnr','name_startnr_year', 'class', 'club', 'time', 'gender',
-       'control', 'year', 'country', 'duration_s', 'duration_h', 'duration_m', 'startgroup','startgroup_year',
-       'd_duration_s', 'd_duration_m', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
-       'd_descent', 'avg_speed_kmh', 'avg_speed_minkm']
+    #tmp.columns = ['placement', 'placement_gender', 'startnr', 'name', 'name_startnr','name_startnr_year', 'class', 'club', 'time', 'gender',
+    #   'control', 'year', 'country', 'duration_s', 'duration_h', 'duration_m', 'startgroup','startgroup_year',
+    #   'd_duration_s', 'd_duration_m', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
+    #   'd_descent', 'avg_speed_kmh', 'avg_speed_minkm']
     return tmp
 
 # Page setting
 st.set_page_config(layout="wide", page_title="VasaData - Vasaloppet Results")
 
-
 plotly_config = {'displayModeBar': False, 'scrollZoom':False }
 
 with open('style.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-
 
 # Data load & data management
 available_years = [2018, 2019, 2020, 2022, 2023, 2024, 2025, 2026]
