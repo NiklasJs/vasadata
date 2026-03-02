@@ -62,10 +62,6 @@ if 'data' not in st.session_state:
 
 df_full = st.session_state['data']
 
-
-
-st.session_state['data'] = df_full
-
 ### ---------------------- Start of Page -----------------------
 # Calculations
 # Layout
@@ -180,98 +176,98 @@ st.divider()
 ### ---------------------- Break Offs  -----------------------
 # Pickers and Headers.
 st.header("DNF Analysis:")
-with st.expander("DNF Analysis - Click to expand!"):
-    # Calculations
-    finish_participants = len(df[df.control=="Finish"].startnr.unique())
-    females_finishing = len(df[(df.control=="Finish")&(df.gender=="W")].startnr.unique())
-    males_finishing = len(df[(df.control=="Finish")&(df.gender=="M")].startnr.unique())
 
-    grp = df[(df["control"].isin(control_points))&(df.gender=="W")].groupby(by=["control"]).startnr.count().reindex(control_points)
-    grp["Start"] = len(df[df.gender=="W"].startnr.unique())
-    female_breaks = -(grp - grp.shift(1))
-    grp = df[(df["control"].isin(control_points))&(df.gender=="M")].groupby(by=["control"]).startnr.count().reindex(control_points)
-    grp["Start"] = len(df[df.gender=="M"].startnr.unique())
-    male_breaks = -(grp - grp.shift(1))
+# Calculations
+finish_participants = len(df[df.control=="Finish"].startnr.unique())
+females_finishing = len(df[(df.control=="Finish")&(df.gender=="W")].startnr.unique())
+males_finishing = len(df[(df.control=="Finish")&(df.gender=="M")].startnr.unique())
 
-    df_breaks = pd.DataFrame({"Total":female_breaks+male_breaks,
-                            }).reset_index().melt("control")
+grp = df[(df["control"].isin(control_points))&(df.gender=="W")].groupby(by=["control"]).startnr.count().reindex(control_points)
+grp["Start"] = len(df[df.gender=="W"].startnr.unique())
+female_breaks = -(grp - grp.shift(1))
+grp = df[(df["control"].isin(control_points))&(df.gender=="M")].groupby(by=["control"]).startnr.count().reindex(control_points)
+grp["Start"] = len(df[df.gender=="M"].startnr.unique())
+male_breaks = -(grp - grp.shift(1))
 
-    df_breaks = df_breaks[df_breaks.control.isin(control_points[1:])]
+df_breaks = pd.DataFrame({"Total":female_breaks+male_breaks,
+                        }).reset_index().melt("control")
 
-    df_breaks_share = pd.DataFrame({"W":100*female_breaks/female_breaks.sum(),
-                            "M":100*male_breaks/male_breaks.sum(),
-                            }).reset_index().melt("control")
-    df_breaks_share = df_breaks_share[df_breaks_share.control.isin(control_points[1:])]
+df_breaks = df_breaks[df_breaks.control.isin(control_points[1:])]
 
-    row_start = df.groupby(by="startgroup").startnr.nunique()
-    row_finish = df[df.control=="Finish"].groupby(by="startgroup").startnr.nunique()
-    row_delta = row_start - row_finish
+df_breaks_share = pd.DataFrame({"W":100*female_breaks/female_breaks.sum(),
+                        "M":100*male_breaks/male_breaks.sum(),
+                        }).reset_index().melt("control")
+df_breaks_share = df_breaks_share[df_breaks_share.control.isin(control_points[1:])]
 
-    df_breaks_row = pd.DataFrame({"Starting":row_start,
-                                "DNFs": row_start-row_finish,
-                                "DNFs %": round(100*(row_start-row_finish)/row_start,2),
-                                "DNFs % of Total": round(100*(row_start-row_finish)/(row_start-row_finish).sum(),2)}).reindex(startgroups).reset_index()
+row_start = df.groupby(by="startgroup").startnr.nunique()
+row_finish = df[df.control=="Finish"].groupby(by="startgroup").startnr.nunique()
+row_delta = row_start - row_finish
 
-    # Data Contents Layout
-    cols = st.columns(3)
-    with cols[0]:
-        cw.number_card_tworow(start_participants-finish_participants,
-                            str(round(100*(start_participants-finish_participants)/start_participants,2))+"%",
-                            "Total DNFs")
-    with cols[1]:
-        cw.number_card_tworow(females-females_finishing, str(round(100*(females-females_finishing)/females,2)) + "%",
-                            "Female DNFs")
-    with cols[2]:
-        cw.number_card_tworow(males - males_finishing,
-                            str(round(100 * (males - males_finishing) / males, 2)) + "%",
-                            "Male DNFs")
-    cols = st.columns(2)
-    with cols[0]:
-        fig = px.bar(df_breaks, x="control", y="value",
-                            labels={'value': '# DNFs', 'control': 'Controlpoint'},
-                            title="# DNFs before Controlpoint",
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-        st.write("""Showing the amount of participants that aborted the race before a certain control-point. 
-        I.e. the value at Mångsbodarna shows how many participants that reached Smågan, but did not reach  (could have gotten stuck in the rope in Smågan, as the rope gets pulled after the timing-station)""")
-    with cols[1]:
-        fig = px.bar(df_breaks_share, x="control", y="value", barmode="group", color="variable",
-                            labels={'value': '% of DNFs', 'control': 'Controlpoint'},
-                            title="DNF Distribution per Gender",
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-        st.write("""Showing the distribution between the control points of the aborted races per participants and per gender. 
-        I.e. you can see if a certain gender is more or less likely to abort early vs late in the race for example.""")
+df_breaks_row = pd.DataFrame({"Starting":row_start,
+                            "DNFs": row_start-row_finish,
+                            "DNFs %": round(100*(row_start-row_finish)/row_start,2),
+                            "DNFs % of Total": round(100*(row_start-row_finish)/(row_start-row_finish).sum(),2)}).reindex(startgroups).reset_index()
 
-    cols = st.columns(2)
-    with cols[0]:
-        fig = px.bar(df_breaks_row,
-                    x="startgroup",
-                    y="DNFs",
-                    title="Total Number of DNFs per Startrow",
-                    labels={'DNFs': '# of DNFs', 'startgroup': 'Row'},
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-        fig.update_layout(xaxis_type='category')
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-        st.write("""Showing the total number of DNFs per start-row""")
-    with cols[1]:
-        fig = px.bar(df_breaks_row,
-                    x="startgroup",
-                    y="DNFs %",
-                    title="DNF Share per Startrow",
-                    labels={"DNFs %": "% Share of Startgroup Participants", 'startgroup': 'Row'},
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-        fig.update_layout(xaxis_type='category')
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-        st.write("""Showing the DNFs as a share of number of participants in that start-row.
-        I.e. if you start in row 10, how likely is it that you will abort the race.""")
+# Data Contents Layout
+cols = st.columns(3)
+with cols[0]:
+    cw.number_card_tworow(start_participants-finish_participants,
+                        str(round(100*(start_participants-finish_participants)/start_participants,2))+"%",
+                        "Total DNFs")
+with cols[1]:
+    cw.number_card_tworow(females-females_finishing, str(round(100*(females-females_finishing)/females,2)) + "%",
+                        "Female DNFs")
+with cols[2]:
+    cw.number_card_tworow(males - males_finishing,
+                        str(round(100 * (males - males_finishing) / males, 2)) + "%",
+                        "Male DNFs")
+cols = st.columns(2)
+with cols[0]:
+    fig = px.bar(df_breaks, x="control", y="value",
+                        labels={'value': '# DNFs', 'control': 'Controlpoint'},
+                        title="# DNFs before Controlpoint",
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+    st.write("""Showing the amount of participants that aborted the race before a certain control-point. 
+    I.e. the value at Mångsbodarna shows how many participants that reached Smågan, but did not reach  (could have gotten stuck in the rope in Smågan, as the rope gets pulled after the timing-station)""")
+with cols[1]:
+    fig = px.bar(df_breaks_share, x="control", y="value", barmode="group", color="variable",
+                        labels={'value': '% of DNFs', 'control': 'Controlpoint'},
+                        title="DNF Distribution per Gender",
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+    st.write("""Showing the distribution between the control points of the aborted races per participants and per gender. 
+    I.e. you can see if a certain gender is more or less likely to abort early vs late in the race for example.""")
 
-    st.divider()
+cols = st.columns(2)
+with cols[0]:
+    fig = px.bar(df_breaks_row,
+                x="startgroup",
+                y="DNFs",
+                title="Total Number of DNFs per Startrow",
+                labels={'DNFs': '# of DNFs', 'startgroup': 'Row'},
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+    st.write("""Showing the total number of DNFs per start-row""")
+with cols[1]:
+    fig = px.bar(df_breaks_row,
+                x="startgroup",
+                y="DNFs %",
+                title="DNF Share per Startrow",
+                labels={"DNFs %": "% Share of Startgroup Participants", 'startgroup': 'Row'},
+                    color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+    st.write("""Showing the DNFs as a share of number of participants in that start-row.
+    I.e. if you start in row 10, how likely is it that you will abort the race.""")
+
+st.divider()
 
 ### ---------------------- Section Analysis  -----------------------
 # Pickers and Headers.
-st.header("Section & Other Analyses:")
-with st.expander("Section Analysis - Click to expand!"):
+st.header("Section, High Point & Overtake Analysis:")
+with st.expander("Section, High Point & Overtake Analysis - Click to expand!"):
     df_speed = df.loc[df.avg_speed_kmh<40,["control","startgroup", "avg_speed_kmh"]].groupby(by=["control","startgroup"]).mean().reset_index()
     df_speed_gender = df.loc[df.avg_speed_kmh<40,["control","gender", "avg_speed_kmh"]].groupby(by=["control","gender"]).mean().reset_index()
 
@@ -323,179 +319,176 @@ with st.expander("Section Analysis - Click to expand!"):
 st.divider()
 ### ---------------------- Individual Comparison  -----------------------
 # Pickers and Headers.
-st.header("Individual Results Analysis & Comparison:")
-with st.expander("Individual Analysis - Click to expand!"):
-    cols = st.columns(2)
+st.header("Individual Participant Results Analysis:")
 
-    df_avg_startgroup = df.loc[(df.avg_speed_kmh<40)&(df.control!="Start"),["control","startgroup", "avg_speed_kmh", "d_duration_m", "placement"]].groupby(by=["control","startgroup"]).mean().reset_index()
+cols = st.columns(2)
 
-    with cols[0]:
-        selected_names = st.multiselect('Add names that you want to analyse and/or compare', df.name_startnr.unique())
-    with cols[1]:
-        selected_groups = st.multiselect('Add Startgroup averages as comparisons', df.startgroup.unique().sort_values())
+df_avg_startgroup = df.loc[(df.avg_speed_kmh<40)&(df.control!="Start"),["control","startgroup", "avg_speed_kmh", "d_duration_m", "placement"]].groupby(by=["control","startgroup"]).mean().reset_index()
+
+with cols[0]:
+    selected_names = st.multiselect('Add names that you want to analyse and/or compare', df.name_startnr.unique())
+with cols[1]:
+    selected_groups = st.multiselect('Add Startgroup averages as comparisons', df.startgroup.unique().sort_values())
 
 
-    cols = st.columns(2)
-    with cols[0]:
-        fig = px.line(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="avg_speed_kmh",
-                        color="name", title='Average Speed per Section',
-                        labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
-                            color_discrete_sequence=px.colors.qualitative.Set3)
+cols = st.columns(2)
+with cols[0]:
+    fig = px.line(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="avg_speed_kmh",
+                    color="name", title='Average Speed per Section',
+                    labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
+                        color_discrete_sequence=px.colors.qualitative.Set3)
 
-        for i, group in enumerate(selected_groups):
-            tmp = df_avg_startgroup[(df_avg_startgroup.startgroup==group) & (df_avg_startgroup.control!="Start")]
-            fig.add_trace(go.Scatter(x=tmp.control, y=tmp.avg_speed_kmh, name=group,
-                                    line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
+    for i, group in enumerate(selected_groups):
+        tmp = df_avg_startgroup[(df_avg_startgroup.startgroup==group) & (df_avg_startgroup.control!="Start")]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.avg_speed_kmh, name=group,
+                                line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
 
-        fig.update_layout(xaxis_type='category')
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
 
-    with cols[1]:
-        fig = px.bar(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="d_duration_m",
-                    color="name", title='Average Duration per Section',barmode="group",
-                    labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'}, range_y=[0,180],
-                    color_discrete_sequence=px.colors.qualitative.Set3)
+with cols[1]:
+    fig = px.bar(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="d_duration_m",
+                color="name", title='Average Duration per Section',barmode="group",
+                labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'}, range_y=[0,180],
+                color_discrete_sequence=px.colors.qualitative.Set3)
 
-        for i, group in enumerate(selected_groups):
-            tmp = df_avg_startgroup[(df_avg_startgroup.startgroup==group) & (df_avg_startgroup.control!="Start")]
-            fig.add_trace(go.Scatter(x=tmp.control, y=tmp.d_duration_m, name=group,
-                                    line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
+    for i, group in enumerate(selected_groups):
+        tmp = df_avg_startgroup[(df_avg_startgroup.startgroup==group) & (df_avg_startgroup.control!="Start")]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.d_duration_m, name=group,
+                                line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
 
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
 
-    # Add Placement Information
-    with cols[0]:
-        fig = px.line(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="placement",
-                        color="name", title='Total Placement per Control',
-                        labels={"placement": "Placement", 'control': 'Controlpoint'},
-                            color_discrete_sequence=px.colors.qualitative.Set3)
+# Add Placement Information
+with cols[0]:
+    fig = px.line(df[(df.control != "Start") & (df.name_startnr.isin(selected_names))], x="control", y="placement",
+                    color="name", title='Total Placement per Control',
+                    labels={"placement": "Placement", 'control': 'Controlpoint'},
+                        color_discrete_sequence=px.colors.qualitative.Set3)
 
-        for i, group in enumerate(selected_groups):
-            tmp = df_avg_startgroup[(df_avg_startgroup.startgroup==group) & (df_avg_startgroup.control!="Start")]
-            fig.add_trace(go.Scatter(x=tmp.control, y=tmp.placement, name=group,
-                                    line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
+    for i, group in enumerate(selected_groups):
+        tmp = df_avg_startgroup[(df_avg_startgroup.startgroup==group) & (df_avg_startgroup.control!="Start")]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.placement, name=group,
+                                line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
 
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
 
-    with cols[1]:
-        st.write("#### Table View of Selected Data")
-        st.dataframe(df.loc[(df.control == "Finish") & (df.name_startnr.isin(selected_names)),["name_startnr","startgroup","club", "time", "placement", "placement_gender"]], hide_index=True)
-
+with cols[1]:
+    st.write("#### Table View of Selected Data")
+    st.dataframe(df.loc[(df.control == "Finish") & (df.name_startnr.isin(selected_names)),["name_startnr","startgroup","club", "time", "placement", "placement_gender"]], hide_index=True)
 
 st.divider()
 
 ### ---------------------- Year over Year Comparison  -----------------------
 # Pickers and Headers.
 st.header("Year over Year Comparison:")
-with st.expander("Year over Year Analysis (both general stats and individual comparisons) - Click to expand!"):
 
-    df_start_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startgroup","startnr"]].groupby(by=["year", "startgroup"]).count().reset_index()
+df_start_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startgroup","startnr"]].groupby(by=["year", "startgroup"]).count().reset_index()
 
-    df_breaks_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startnr"]].groupby(by=["year"]).count()
-    df_breaks_year["finish"] = df_full[df_full.control=="Finish"].drop_duplicates(subset=["year", "startnr"])[["year", "startnr"]].groupby(by=["year"]).count()
-    df_breaks_year["break_offs"] = df_breaks_year.startnr - df_breaks_year.finish
-    df_breaks_year = df_breaks_year.reset_index()
+df_breaks_year = df_full.drop_duplicates(subset=["year", "startnr"])[["year","startnr"]].groupby(by=["year"]).count()
+df_breaks_year["finish"] = df_full[df_full.control=="Finish"].drop_duplicates(subset=["year", "startnr"])[["year", "startnr"]].groupby(by=["year"]).count()
+df_breaks_year["break_offs"] = df_breaks_year.startnr - df_breaks_year.finish
+df_breaks_year = df_breaks_year.reset_index()
 
-    cols = st.columns(2)
-    with cols[0]:
-        fig = px.bar(df_start_year, x="year", y="startnr",
-                    labels={'startnr': '# Participants', 'year': 'Year'},
-                    title="# Participants per Year (starting)", color="startgroup",
+cols = st.columns(2)
+with cols[0]:
+    fig = px.bar(df_start_year, x="year", y="startnr",
+                labels={'startnr': '# Participants', 'year': 'Year'},
+                title="# Participants per Year (starting)", color="startgroup",
+                color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+with cols[1]:
+    fig = px.bar(df_breaks_year, x="year", y="break_offs",
+                labels={'break_offs': '# participants', 'year': 'Year'},
+                title="# Break-offs per Year",
+                color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+
+
+cols = st.columns(2)
+with cols[0]:
+    fig = px.violin(df_full[df_full.control == "Finish"].sort_values(by="year"), x="year", y="duration_h",
+                    title="Finish Time Distribution per Year",
+                    labels={'duration_h': 'Duration Hours', 'year': 'Year'},
                     color_discrete_sequence=px.colors.qualitative.Set3)
-        fig.update_layout(xaxis_type='category')
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-    with cols[1]:
-        fig = px.bar(df_breaks_year, x="year", y="break_offs",
-                    labels={'break_offs': '# participants', 'year': 'Year'},
-                    title="# Break-offs per Year",
-                    color_discrete_sequence=px.colors.qualitative.Set3)
-        fig.update_layout(xaxis_type='category')
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
+    fig.update_layout(xaxis_type='category')
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+
+with cols[1]:
+    fig = px.scatter(df_full[df_full.control=="Finish"], y="placement", x="duration_h", color="year",
+                    title="Placement vs Finish Time per Year",
+                    labels={'duration_h': 'Duration Hours', 'placement': 'Placement'},
+                    color_continuous_scale=px.colors.sequential.YlGnBu)
+
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
+
+st.divider()
+## Individual Year over Year Analysis
+# Pickers and Headers.
+st.header("Individual Results Year over Year Analysis:")
+
+cols = st.columns(2)
+
+df_full_avg_startgroup = df_full.loc[(df_full.avg_speed_kmh<40)&(df_full.control!="Start"),["control","startgroup_year", "avg_speed_kmh", "d_duration_m", "placement"]].groupby(by=["control","startgroup_year"]).mean().reset_index()
+
+with cols[0]:
+    selected_names_year = st.multiselect('Add names and years to analyse and/or compare', df_full.name_startnr_year.unique())
+with cols[1]:
+    selected_groups_year = st.multiselect('Add yearly startgroup averages as comparisons', df_full.startgroup_year.sort_values().unique())
 
 
-    cols = st.columns(2)
-    with cols[0]:
-        fig = px.violin(df_full[df_full.control == "Finish"].sort_values(by="year"), x="year", y="duration_h",
-                        title="Finish Time Distribution per Year",
-                        labels={'duration_h': 'Duration Hours', 'year': 'Year'},
+cols = st.columns(2)
+with cols[0]:
+    fig = px.line(df_full[(df_full.control != "Start") & (df_full.name_startnr_year.isin(selected_names_year))], x="control", y="avg_speed_kmh",
+                    color="name_startnr_year", title='Average Speed per Section and Year',
+                    labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
                         color_discrete_sequence=px.colors.qualitative.Set3)
-        fig.update_layout(xaxis_type='category')
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
 
-    with cols[1]:
-        fig = px.scatter(df_full[df_full.control=="Finish"], y="placement", x="duration_h", color="year",
-                        title="Placement vs Finish Time per Year",
-                        labels={'duration_h': 'Duration Hours', 'placement': 'Placement'},
-                        color_continuous_scale=px.colors.sequential.YlGnBu)
+    for i, group in enumerate(selected_groups_year):
+        tmp = df_full_avg_startgroup[(df_full_avg_startgroup.startgroup_year==group) & (df_full_avg_startgroup.control!="Start")]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.avg_speed_kmh, name=group,
+                                line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
 
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
+    fig.update_layout(xaxis_type='category')
+    fig.update_xaxes(categoryorder='array',
+                    categoryarray=sortorder)
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
 
-    st.divider()
-    ## Individual Year over Year Analysis
-    # Pickers and Headers.
-    st.header("Individual Results Year over Year Analysis:")
+with cols[1]:
+    fig = px.bar(df_full[(df_full.control != "Start") & (df_full.name_startnr_year.isin(selected_names_year))], x="control", y="d_duration_m",
+                color="name_startnr_year", title='Average Duration per Section and Year',barmode="group",
+                labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'}, range_y=[0,180],
+                color_discrete_sequence=px.colors.qualitative.Set3)
 
-    cols = st.columns(2)
+    for i, group in enumerate(selected_groups_year):
+        tmp = df_full_avg_startgroup[(df_full_avg_startgroup.startgroup_year==group) & (df_full_avg_startgroup.control!="Start")]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.d_duration_m, name=group,
+                                line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
 
-    df_full_avg_startgroup = df_full.loc[(df_full.avg_speed_kmh<40)&(df_full.control!="Start"),["control","startgroup_year", "avg_speed_kmh", "d_duration_m", "placement"]].groupby(by=["control","startgroup_year"]).mean().reset_index()
+    fig.update_xaxes(categoryorder='array',
+                    categoryarray=sortorder)
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
 
-    with cols[0]:
-        selected_names_year = st.multiselect('Add names and years to analyse and/or compare', df_full.name_startnr_year.unique())
-    with cols[1]:
-        selected_groups_year = st.multiselect('Add yearly startgroup averages as comparisons', df_full.startgroup_year.sort_values().unique())
+# Add Placement Information
+with cols[0]:
+    fig = px.line(df_full[(df_full.control != "Start") & (df_full.name_startnr_year.isin(selected_names_year))], x="control", y="placement",
+                    color="name_startnr_year", title='Total Placement per Control and Year',
+                    labels={"placement": "Placement", 'control': 'Controlpoint'},
+                        color_discrete_sequence=px.colors.qualitative.Set3)
 
+    for i, group in enumerate(selected_groups_year):
+        tmp = df_full_avg_startgroup[(df_full_avg_startgroup.startgroup_year==group) & (df_full_avg_startgroup.control!="Start")]
+        fig.add_trace(go.Scatter(x=tmp.control, y=tmp.placement, name=group,
+                                line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
 
-    cols = st.columns(2)
-    with cols[0]:
-        fig = px.line(df_full[(df_full.control != "Start") & (df_full.name_startnr_year.isin(selected_names_year))], x="control", y="avg_speed_kmh",
-                        color="name_startnr_year", title='Average Speed per Section and Year',
-                        labels={"avg_speed_kmh": "km/h (avg)", 'control': 'Controlpoint'},
-                            color_discrete_sequence=px.colors.qualitative.Set3)
+    fig.update_xaxes(categoryorder='array',
+                    categoryarray=sortorder)
+    st.plotly_chart(fig, width='stretch', config=plotly_config)
 
-        for i, group in enumerate(selected_groups_year):
-            tmp = df_full_avg_startgroup[(df_full_avg_startgroup.startgroup_year==group) & (df_full_avg_startgroup.control!="Start")]
-            fig.add_trace(go.Scatter(x=tmp.control, y=tmp.avg_speed_kmh, name=group,
-                                    line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
-
-        fig.update_layout(xaxis_type='category')
-        fig.update_xaxes(categoryorder='array',
-                        categoryarray=sortorder)
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-
-    with cols[1]:
-        fig = px.bar(df_full[(df_full.control != "Start") & (df_full.name_startnr_year.isin(selected_names_year))], x="control", y="d_duration_m",
-                    color="name_startnr_year", title='Average Duration per Section and Year',barmode="group",
-                    labels={"d_duration_m": "Duration Minutes", 'control': 'Controlpoint'}, range_y=[0,180],
-                    color_discrete_sequence=px.colors.qualitative.Set3)
-
-        for i, group in enumerate(selected_groups_year):
-            tmp = df_full_avg_startgroup[(df_full_avg_startgroup.startgroup_year==group) & (df_full_avg_startgroup.control!="Start")]
-            fig.add_trace(go.Scatter(x=tmp.control, y=tmp.d_duration_m, name=group,
-                                    line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
-
-        fig.update_xaxes(categoryorder='array',
-                        categoryarray=sortorder)
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-
-    # Add Placement Information
-    with cols[0]:
-        fig = px.line(df_full[(df_full.control != "Start") & (df_full.name_startnr_year.isin(selected_names_year))], x="control", y="placement",
-                        color="name_startnr_year", title='Total Placement per Control and Year',
-                        labels={"placement": "Placement", 'control': 'Controlpoint'},
-                            color_discrete_sequence=px.colors.qualitative.Set3)
-
-        for i, group in enumerate(selected_groups_year):
-            tmp = df_full_avg_startgroup[(df_full_avg_startgroup.startgroup_year==group) & (df_full_avg_startgroup.control!="Start")]
-            fig.add_trace(go.Scatter(x=tmp.control, y=tmp.placement, name=group,
-                                    line=dict(width=2, dash='dot', color=px.colors.qualitative.Prism[i])))
-
-        fig.update_xaxes(categoryorder='array',
-                        categoryarray=sortorder)
-        st.plotly_chart(fig, width='stretch', config=plotly_config)
-
-    with cols[1]:
-        st.write("#### Table View of Selected Data and Year")
-        st.dataframe(df_full.loc[(df_full.control == "Finish") & (df_full.name_startnr_year.isin(selected_names_year)),["name_startnr_year","startgroup_year","club", "time", "placement", "placement_gender"]], hide_index=True)
-
+with cols[1]:
+    st.write("#### Table View of Selected Data and Year")
+    st.dataframe(df_full.loc[(df_full.control == "Finish") & (df_full.name_startnr_year.isin(selected_names_year)),["name_startnr_year","startgroup_year","club", "time", "placement", "placement_gender"]], hide_index=True)
 
 st.divider()
