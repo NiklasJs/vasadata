@@ -13,12 +13,35 @@ warnings.filterwarnings("ignore")
 
 @st.cache_data
 def read_data(available_years):
-    tmp = pd.concat([pd.read_parquet(f"data/{year}_full.parquet") for year in available_years], ignore_index=True)
+    
+    # Merge all parquets
+    df_full = pd.concat([pd.read_parquet(f"data/{year}_full.parquet") for year in available_years], ignore_index=True)
     #tmp.columns = ['placement', 'placement_gender', 'startnr', 'name', 'name_startnr','name_startnr_year', 'class', 'club', 'time', 'gender',
     #   'control', 'year', 'country', 'duration_s', 'duration_h', 'duration_m', 'startgroup','startgroup_year',
     #   'd_duration_s', 'd_duration_m', 'height_m', 'distance_km', 'd_distance_km', 'd_ascent',
     #   'd_descent', 'avg_speed_kmh', 'avg_speed_minkm']
-    return tmp
+
+    # Typecasting
+    for col in ["placement", "placement_gender", "year", "duration_s", "duration_m", "duration_h", "d_duration_s", "d_duration_m","height_m",
+            "distance_km", "d_distance_km", "d_ascent", "d_descent", "avg_speed_kmh", "avg_speed_minkm"]:
+        df_full[col] = pd.to_numeric(df_full[col])
+
+
+    for col in ["class", "club", "gender", "country"]:
+        df_full[col] = df_full[col].astype("category")
+
+    startgroups = ["Elit","1","2","3","4","5","6","7","8","9","10"]
+    df_full["startgroup"] = pd.Categorical(df_full["startgroup"], categories=startgroups, ordered=True)
+
+    sortorder = ["Start", "High Point", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
+    df_full["control"] = pd.Categorical(df_full["control"], categories=sortorder, ordered=True)
+
+    for col in ["startnr", "name", "name_startnr"]:
+        df_full[col] = df_full[col].astype("string")
+    
+    return df_full
+
+control_points = ["Start", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
 
 # Page setting
 st.set_page_config(layout="wide", page_title="VasaData - Vasaloppet Results")
@@ -36,23 +59,7 @@ if 'data' not in st.session_state:
 
 df_full = st.session_state['data']
 
-for col in ["placement", "placement_gender", "year", "duration_s", "duration_m", "duration_h", "d_duration_s", "d_duration_m","height_m",
-            "distance_km", "d_distance_km", "d_ascent", "d_descent", "avg_speed_kmh", "avg_speed_minkm"]:
-    df_full[col] = pd.to_numeric(df_full[col])
 
-
-for col in ["class", "club", "gender", "country"]:
-    df_full[col] = df_full[col].astype("category")
-
-startgroups = ["Elit","1","2","3","4","5","6","7","8","9","10"]
-df_full["startgroup"] = pd.Categorical(df_full["startgroup"], categories=startgroups, ordered=True)
-
-sortorder = ["Start", "High Point", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
-control_points = ["Start", "Smågan", "Mångsbodarna", "Risberg", "Evertsberg", "Oxberg", "Hökberg", "Eldris", "Finish"]
-df_full["control"] = pd.Categorical(df_full["control"], categories=sortorder, ordered=True)
-
-for col in ["startnr", "name", "name_startnr"]:
-    df_full[col] = df_full[col].astype("string")
 
 st.session_state['data'] = df_full
 
